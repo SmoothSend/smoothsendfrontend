@@ -214,7 +214,7 @@ Update `.env.local` with your contract addresses for different networks.
 
 ## 🔗 Links
 
-- **Live Demo**: https://smoothsend-frontend.vercel.app
+- **Live Demo**: https://smoothsend.xyz
 - **Aptos Explorer**: https://explorer.aptoslabs.com/?network=testnet
 - **Aptos Docs**: https://aptos.dev/
 - **Next.js Docs**: https://nextjs.org/docs
