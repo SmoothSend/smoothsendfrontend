@@ -4,7 +4,7 @@ Modern Next.js frontend for gasless USDC transactions on Aptos blockchain.
 
 **✅ LIVE ON TESTNET!**
 
-🌐 **Live Demo**: [https://smoothsend-frontend.vercel.app](https://smoothsend-frontend.vercel.app)
+🌐 **Live Demo**: [https://smoothsend.xyz](https://www.smoothsend.xyz)
 
 ## ✨ Features
 
