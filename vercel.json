@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
+  ],
+  "env": {
+    "NEXT_PUBLIC_API_URL": "https://your-azure-backend.azurewebsites.net",
+    "NEXT_PUBLIC_APTOS_NETWORK": "testnet",
+    "NEXT_PUBLIC_USDC_CONTRACT": "0x3c27315fb69ba6e4b960f1507d1cefcc9a4247869f26a8d59d6b7869d23782c::test_coins::USDC"
+  }
+}

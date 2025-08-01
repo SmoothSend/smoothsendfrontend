@@ -1,0 +1,20 @@
+# Frontend Environment Variables for Vercel
+# Add these in Vercel Dashboard -> Project Settings -> Environment Variables
+
+# Backend API Configuration
+NEXT_PUBLIC_API_URL=https://your-azure-backend.azurewebsites.net
+
+# Aptos Network Configuration
+NEXT_PUBLIC_APTOS_NETWORK=testnet
+
+# Contract Addresses
+NEXT_PUBLIC_USDC_CONTRACT=0x3c27315fb69ba6e4b960f1507d1cefcc9a4247869f26a8d59d6b7869d23782c::test_coins::USDC
+NEXT_PUBLIC_RELAYER_ADDRESS=your_relayer_address_here
+NEXT_PUBLIC_SMOOTHSEND_CONTRACT=your_smoothsend_contract_address
+
+# Testnet Configuration (for demo purposes)
+NEXT_PUBLIC_TESTNET_SENDER_ADDRESS=0x5d39e7e11ebab92bcf930f3723c2498eb7accea57fce3c064ab1dba2df5ff29a
+
+# Supabase Configuration
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
