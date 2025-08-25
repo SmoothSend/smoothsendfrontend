@@ -12,6 +12,8 @@ import { Send, User, DollarSign, Settings, CheckCircle, AlertCircle, Loader2 } f
 import { useToast } from "@/hooks/use-toast"
 import { apiService } from "../lib/api-service"
 import { TransactionProgress } from "./transaction-progress"
+import { ValidationHelpers, handleContractError } from "../lib/contract-errors"
+import { RELAYER_ADDRESS } from "../lib/constants"
 
 export function TransferForm() {
   const { address } = useWallet()
@@ -28,9 +30,38 @@ export function TransferForm() {
 
   const MAX_TRANSFER_LIMIT = 10 // 10 USDC maximum transfer limit
   
-  const isValidAddress = recipient.length === 66 && recipient.startsWith("0x")
+  // Enhanced validation with v2 security features
+  const validateTransfer = () => {
+    const errors: string[] = []
+    
+    // Basic validations
+    if (!ValidationHelpers.validateAddress(recipient)) {
+      errors.push("Invalid recipient address format")
+    }
+    
+    if (ValidationHelpers.isZeroAmount(amount)) {
+      errors.push("Amount must be greater than zero")
+    }
+    
+    // v2 Security validations
+    if (address && ValidationHelpers.isSelfTransfer(address, recipient, RELAYER_ADDRESS)) {
+      errors.push("Cannot transfer to yourself or the relayer")
+    }
+    
+    // Check overflow risk
+    const amountInMicroUSDC = (parseFloat(amount || "0") * 1_000_000).toString()
+    const estimatedFee = "1000" // Rough estimate, real fee comes from quote
+    if (ValidationHelpers.isOverflowRisk(amountInMicroUSDC, estimatedFee)) {
+      errors.push("Amount is too large and may cause overflow")
+    }
+    
+    return errors
+  }
+  
+  const validationErrors = validateTransfer()
+  const isValidAddress = ValidationHelpers.validateAddress(recipient)
   const amountNum = parseFloat(amount) || 0
-  const isValidAmount = amountNum > 0 && amountNum <= Math.min(balance, MAX_TRANSFER_LIMIT)
+  const isValidAmount = amountNum > 0 && amountNum <= Math.min(balance, MAX_TRANSFER_LIMIT) && validationErrors.length === 0
 
   // Fetch balance on component mount
   useEffect(() => {
@@ -118,7 +149,12 @@ export function TransferForm() {
     setShowSuccess(false)
 
     try {
-      // Step 1: Validate inputs
+      // Step 1: Enhanced validation with v2 security features
+      const validationErrors = validateTransfer()
+      if (validationErrors.length > 0) {
+        throw new Error(validationErrors[0])
+      }
+      
       const amountNum = parseFloat(amount)
       if (amountNum <= 0) {
         throw new Error("Amount must be greater than 0")
@@ -134,9 +170,14 @@ export function TransferForm() {
 
       // Step 2: Get quote for gasless transaction (user pays USDC fees)
       const coinType = process.env.NEXT_PUBLIC_USDC_CONTRACT || "0x3c27315fb69ba6e4b960f1507d1cefcc9a4247869f26a8d59d6b7869d23782c::test_coins::USDC"
+      // Use the same testnet sender throughout (quote + signing + submit)
+      const testnetSenderAddress = process.env.NEXT_PUBLIC_TESTNET_SENDER_ADDRESS
+      if (!testnetSenderAddress) {
+        throw new Error('Testnet sender address not configured in environment variables')
+      }
       
       const quote = await apiService.getGaslessQuote({
-        fromAddress: address,
+        fromAddress: testnetSenderAddress,
         toAddress: recipient,
         amount: (amountNum * 1_000_000).toString(),
         coinType
@@ -149,13 +190,7 @@ export function TransferForm() {
       setCurrentStep(3)
 
       // Get testnet account signature (users don't need wallets)
-      const testnetSignature = await getUserSignatureForTestnet(address)
-
-      // Get testnet sender address from environment
-      const testnetSenderAddress = process.env.NEXT_PUBLIC_TESTNET_SENDER_ADDRESS
-      if (!testnetSenderAddress) {
-        throw new Error('Testnet sender address not configured in environment variables')
-      }
+      const testnetSignature = await getUserSignatureForTestnet(testnetSenderAddress)
 
       // Step 4: Submit gasless transaction with testnet signature
       setCurrentStep(4)
@@ -188,9 +223,13 @@ export function TransferForm() {
 
     } catch (error: any) {
       console.error("Transaction error:", error)
+      
+      // Enhanced error handling for v2 contract errors
+      const errorMessage = handleContractError(error) || error.message || "Something went wrong"
+      
       toast({
         title: "Transaction Failed",
-        description: error.message || "Something went wrong",
+        description: errorMessage,
         variant: "destructive",
       })
     } finally {
@@ -302,6 +341,16 @@ export function TransferForm() {
               <span>Invalid address format</span>
             </p>
           )}
+          {validationErrors.length > 0 && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-md p-3">
+              {validationErrors.map((error, index) => (
+                <p key={index} className="text-red-600 dark:text-red-400 text-sm flex items-center space-x-1">
+                  <AlertCircle className="w-4 h-4" />
+                  <span>{error}</span>
+                </p>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -367,13 +416,13 @@ export function TransferForm() {
           <div className="flex justify-between text-sm">
             <span className="text-gray-600 dark:text-gray-400">Relayer Fee</span>
             <span className="text-orange-500 dark:text-orange-400">
-              {currentQuote ? `${currentQuote.quote.relayerFee} USDC` : "~0.01 USDC (10% markup)"}
+              {currentQuote ? `${(parseFloat(currentQuote.quote.relayerFee) / 1_000_000).toFixed(6)} USDC` : "~0.01 USDC (10% markup)"}
             </span>
           </div>
           <div className="border-t border-gray-200 dark:border-gray-700 pt-2 flex justify-between">
             <span className="text-gray-900 dark:text-gray-100 font-medium">You Pay</span>
             <span className="text-gray-900 dark:text-gray-100 font-medium">
-              {amount || "0"} USDC + {currentQuote ? currentQuote.quote.relayerFee : "fee"}
+              {amount || "0"} USDC + {currentQuote ? `${(parseFloat(currentQuote.quote.relayerFee) / 1_000_000).toFixed(6)} USDC` : "fee"}
             </span>
           </div>
         </div>

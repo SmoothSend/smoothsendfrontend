@@ -322,6 +322,93 @@ class ApiService {
     return { transactions: [] }
   }
 
+  // NEW v2 CONTRACT VIEW FUNCTIONS
+  
+  // Check if a coin is supported by the contract
+  async isCoinSupported(coinType: string): Promise<boolean> {
+    try {
+      const response = await this.request(`/api/v1/relayer/contract/is-coin-supported?coinType=${encodeURIComponent(coinType)}`) as any
+      return response.supported || false
+    } catch (error) {
+      console.error('Error checking coin support:', error)
+      return false
+    }
+  }
+
+  // Check if a relayer is whitelisted
+  async isRelayerWhitelisted(relayerAddress: string): Promise<boolean> {
+    try {
+      const response = await this.request(`/api/v1/relayer/contract/is-relayer-whitelisted?address=${relayerAddress}`) as any
+      return response.whitelisted || false
+    } catch (error) {
+      console.error('Error checking relayer whitelist:', error)
+      return false
+    }
+  }
+
+  // Get current contract admin
+  async getContractAdmin(): Promise<string | null> {
+    try {
+      const response = await this.request('/api/v1/relayer/contract/admin') as any
+      return response.admin || null
+    } catch (error) {
+      console.error('Error getting contract admin:', error)
+      return null
+    }
+  }
+
+  // Get maximum safe transfer amount (prevents overflow)
+  async getMaxSafeAmount(relayerFee: string): Promise<string> {
+    try {
+      const response = await this.request(`/api/v1/relayer/contract/max-safe-amount?relayerFee=${relayerFee}`) as any
+      return response.maxAmount || "0"
+    } catch (error) {
+      console.error('Error getting max safe amount:', error)
+      return "0"
+    }
+  }
+
+  // Enhanced validation for v2 security features
+  async validateTransferParams(fromAddress: string, toAddress: string, amount: string, relayerFee: string): Promise<{
+    valid: boolean
+    errors: string[]
+  }> {
+    const errors: string[] = []
+
+    // Check for zero amounts (v2 security feature)
+    if (!amount || amount === "0") {
+      errors.push("Amount cannot be zero")
+    }
+    if (!relayerFee || relayerFee === "0") {
+      errors.push("Relayer fee cannot be zero")
+    }
+
+    // Check for self-transfers (v2 security feature)
+    if (fromAddress === toAddress) {
+      errors.push("Cannot transfer to yourself")
+    }
+
+    // Check for overflow risk (v2 security feature)
+    try {
+      const amountNum = BigInt(amount || "0")
+      const feeNum = BigInt(relayerFee || "0")
+      const total = amountNum + feeNum
+      
+      // Check if total would overflow u64 max
+      const maxU64 = BigInt("18446744073709551615")
+      if (total > maxU64) {
+        errors.push("Amount + fee would cause overflow")
+      }
+    } catch (error) {
+      errors.push("Invalid amount or fee format")
+    }
+
+    return {
+      valid: errors.length === 0,
+      errors
+    }
+  }
+
   // Email signup for mainnet waitlist
   async submitEmailSignup(email: string, twitter?: string): Promise<SubmissionResponse> {
     try {
