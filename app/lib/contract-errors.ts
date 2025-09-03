@@ -54,49 +54,58 @@ export function getErrorMessage(errorCode: number): string {
 }
 
 // Helper function to check if an error is a known contract error
-export function isContractError(error: any): boolean {
-  if (typeof error === 'string' && error.includes('Move abort')) {
+export function isContractError(error: unknown): boolean {
+  if (typeof error === "string" && error.includes("Move abort")) {
     return true;
   }
-  if (error?.message && typeof error.message === 'string') {
-    return error.message.includes('Move abort') || error.message.includes('execution_failure');
+  if (
+    error &&
+    typeof error === "object" &&
+    "message" in error &&
+    typeof (error as { message: unknown }).message === "string"
+  ) {
+    const message = (error as { message: string }).message;
+    return message.includes("Move abort") || message.includes("execution_failure");
   }
   return false;
 }
 
 // Extract error code from Move abort message
-export function extractErrorCode(error: any): number | null {
-  const errorStr = typeof error === 'string' ? error : error?.message || '';
-  
+export function extractErrorCode(error: unknown): number | null {
+  const errorStr =
+    typeof error === "string"
+      ? error
+      : (error as { message?: string })?.message || "";
+
   // Look for patterns like "Move abort in 0x...: 5" or "abort_code: 5"
   const patterns = [
     /Move abort.*?(\d+)$/,
     /abort_code[:\s]+(\d+)/,
     /error_code[:\s]+(\d+)/,
-    /code[:\s]+(\d+)/
+    /code[:\s]+(\d+)/,
   ];
-  
+
   for (const pattern of patterns) {
     const match = errorStr.match(pattern);
     if (match && match[1]) {
       return parseInt(match[1], 10);
     }
   }
-  
+
   return null;
 }
 
 // Main error handler for contract errors
-export function handleContractError(error: any): string {
+export function handleContractError(error: unknown): string {
   if (!isContractError(error)) {
     return "Transaction failed. Please try again.";
   }
-  
+
   const errorCode = extractErrorCode(error);
   if (errorCode !== null) {
     return getErrorMessage(errorCode);
   }
-  
+
   return "Contract execution failed. Please check your input and try again.";
 }
 

@@ -7,8 +7,15 @@ import { Badge } from "@/components/ui/badge"
 import { AlertTriangle, Bug, Server } from "lucide-react"
 import { apiService } from "../lib/api-service"
 
+interface TestResult {
+  name: string;
+  status: "success" | "failed";
+  data?: unknown;
+  error?: string;
+}
+
 export function DebugPanel() {
-  const [debugInfo, setDebugInfo] = useState<any>(null)
+  const [debugInfo, setDebugInfo] = useState<{ timestamp: string; tests: TestResult[] } | null>(null);
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -17,7 +24,7 @@ export function DebugPanel() {
     setError(null)
     setDebugInfo(null)
 
-    const results: any = {
+    const results: { timestamp: string; tests: TestResult[] } = {
       timestamp: new Date().toISOString(),
       tests: [],
     }
@@ -30,7 +37,8 @@ export function DebugPanel() {
         status: "success",
         data: health,
       })
-    } catch (error: any) {
+    } catch (err: unknown) {
+      const error = err as Error;
       results.tests.push({
         name: "Health Check",
         status: "failed",
@@ -46,7 +54,8 @@ export function DebugPanel() {
         status: "success",
         data: debug,
       })
-    } catch (error: any) {
+    } catch (err: unknown) {
+      const error = err as Error;
       results.tests.push({
         name: "Debug Info",
         status: "failed",
@@ -62,7 +71,8 @@ export function DebugPanel() {
         status: "success",
         data: stats,
       })
-    } catch (error: any) {
+    } catch (err: unknown) {
+      const error = err as Error;
       results.tests.push({
         name: "Relayer Stats",
         status: "failed",
@@ -78,7 +88,8 @@ export function DebugPanel() {
         status: "success",
         data: config,
       })
-    } catch (error: any) {
+    } catch (err: unknown) {
+      const error = err as Error;
       results.tests.push({
         name: "Protocol Config",
         status: "failed",
@@ -138,7 +149,7 @@ export function DebugPanel() {
             Diagnostics run at: {new Date(debugInfo.timestamp).toLocaleString()}
           </div>
 
-          {debugInfo.tests.map((test: any, index: number) => (
+          {debugInfo.tests.map((test, index) => (
             <div key={index} className="p-4 bg-white/5 rounded-2xl">
               <div className="flex items-center justify-between mb-3">
                 <h4 className="font-medium text-white">{test.name}</h4>
@@ -151,7 +162,7 @@ export function DebugPanel() {
                 </div>
               )}
 
-              {test.data && (
+              {!!test.data && (
                 <div className="bg-slate-800/50 rounded-xl p-3">
                   <pre className="text-xs text-slate-300 overflow-x-auto">{JSON.stringify(test.data, null, 2)}</pre>
                 </div>

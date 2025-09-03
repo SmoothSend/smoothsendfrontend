@@ -4,145 +4,185 @@ import type React from "react"
 
 import { useState, useEffect } from "react"
 import { useWallet } from "@aptos-labs/wallet-adapter-react"
-import { Aptos, AptosConfig, Network, buildTransaction, UserTransactionResponse } from "@aptos-labs/ts-sdk"
+import {
+  Aptos,
+  AptosConfig,
+  Network,
+} from "@aptos-labs/ts-sdk";
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Send, User, DollarSign, Settings, CheckCircle, AlertCircle, Loader2 } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
-import { apiService } from "../lib/api-service"
-import { TransactionProgress } from "./transaction-progress"
-import { ValidationHelpers, handleContractError } from "../lib/contract-errors"
-import { RELAYER_ADDRESS, API_ENDPOINTS } from "../lib/constants"
+import {
+  Send,
+  User,
+  DollarSign,
+  CheckCircle,
+  AlertCircle,
+  Loader2,
+} from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiService } from "../lib/api-service";
+import { TransactionProgress } from "./transaction-progress";
+import {
+  ValidationHelpers,
+  handleContractError,
+} from "../lib/contract-errors";
+import { RELAYER_ADDRESS } from "../lib/constants";
 
 export function TransferForm() {
-  const { account, signTransaction } = useWallet()
-  const [recipient, setRecipient] = useState("")
-  const [amount, setAmount] = useState("")
-  const [slippage, setSlippage] = useState(10)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [currentStep, setCurrentStep] = useState(0)
-  const [showSuccess, setShowSuccess] = useState(false)
-  const [transactionHash, setTransactionHash] = useState<string | null>(null)
-  const [balance, setBalance] = useState<number>(0)
-  const [currentQuote, setCurrentQuote] = useState<any>(null)
-  const { toast } = useToast()
+  const { account, signTransaction } = useWallet();
+  const [recipient, setRecipient] = useState("");
+  const [amount, setAmount] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [transactionHash, setTransactionHash] = useState<string | null>(null);
+  const [balance, setBalance] = useState<number>(0);
+  const { toast } = useToast();
 
-  const MAX_TRANSFER_LIMIT = 10 // 10 USDC maximum transfer limit
-  
+  const MAX_TRANSFER_LIMIT = 10; // 10 USDC maximum transfer limit
+
   // Enhanced validation with v2 security features
   const validateTransfer = () => {
-    const errors: string[] = []
-    
+    const errors: string[] = [];
+
     // Basic validations
     if (!ValidationHelpers.validateAddress(recipient)) {
-      errors.push("Invalid recipient address format")
+      errors.push("Invalid recipient address format");
     }
-    
+
     if (ValidationHelpers.isZeroAmount(amount)) {
-      errors.push("Amount must be greater than zero")
+      errors.push("Amount must be greater than zero");
     }
-    
+
     // v2 Security validations
-    if (account?.address && ValidationHelpers.isSelfTransfer(account.address.toString(), recipient, RELAYER_ADDRESS)) {
-      errors.push("Cannot transfer to yourself or the relayer")
+    if (
+      account?.address &&
+      ValidationHelpers.isSelfTransfer(
+        account.address.toString(),
+        recipient,
+        RELAYER_ADDRESS
+      )
+    ) {
+      errors.push("Cannot transfer to yourself or the relayer");
     }
-    
+
     // Check overflow risk
-    const amountInMicroUSDC = (parseFloat(amount || "0") * 1_000_000).toString()
-    const estimatedFee = "1000" // Rough estimate, real fee comes from quote
+    const amountInMicroUSDC = (parseFloat(amount || "0") * 1_000_000).toString();
+    const estimatedFee = "1000"; // Rough estimate, real fee comes from quote
     if (ValidationHelpers.isOverflowRisk(amountInMicroUSDC, estimatedFee)) {
-      errors.push("Amount is too large and may cause overflow")
+      errors.push("Amount is too large and may cause overflow");
     }
-    
-    return errors
-  }
-  
-  const validationErrors = validateTransfer()
-  const isValidAddress = ValidationHelpers.validateAddress(recipient)
-  const amountNum = parseFloat(amount) || 0
-  const isValidAmount = amountNum > 0 && amountNum <= Math.min(balance, MAX_TRANSFER_LIMIT) && validationErrors.length === 0
+
+    return errors;
+  };
+
+  const validationErrors = validateTransfer();
+  const isValidAddress = ValidationHelpers.validateAddress(recipient);
+  const amountNum = parseFloat(amount) || 0;
+  const isValidAmount =
+    amountNum > 0 &&
+    amountNum <= Math.min(balance, MAX_TRANSFER_LIMIT) &&
+    validationErrors.length === 0;
 
   // Fetch balance on component mount
   useEffect(() => {
     const fetchBalance = async () => {
-      if (!account?.address) return
-      
+      if (!account?.address) return;
+
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/relayer/balance/${account.address.toString()}`)
+        const response = await fetch(
+          `${
+            process.env.NEXT_PUBLIC_API_URL
+          }/api/v1/relayer/balance/${account.address.toString()}`
+        );
         if (response.ok) {
-          const balanceData = await response.json()
+          const balanceData = await response.json();
           if (balanceData.success) {
-            setBalance(balanceData.balance)
+            setBalance(balanceData.balance);
           }
         }
-      } catch (error) {
+      } catch (err: unknown) {
+        const error = err as Error;
+        console.error(error);
         // Use demo balance for testnet
-        setBalance(2868.82)
+        setBalance(2868.82);
       }
-    }
-    
-    fetchBalance()
-  }, [account?.address])
+    };
+
+    fetchBalance();
+  }, [account?.address]);
 
   // Note: We don't need to fetch quotes upfront since the gasless endpoint handles it internally
   // useEffect removed for simplified gasless flow
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!recipient || !amount || !account?.address) return
+    e.preventDefault();
+    if (!recipient || !amount || !account?.address) return;
 
-    setIsSubmitting(true)
-    setCurrentStep(0)
-    setShowSuccess(false)
+    setIsSubmitting(true);
+    setCurrentStep(0);
+    setShowSuccess(false);
 
     try {
       // Step 1: Enhanced validation with v2 security features
-      const validationErrors = validateTransfer()
+      const validationErrors = validateTransfer();
       if (validationErrors.length > 0) {
-        throw new Error(validationErrors[0])
+        throw new Error(validationErrors[0]);
       }
-      
-      const amountNum = parseFloat(amount)
+
+      const amountNum = parseFloat(amount);
       if (amountNum <= 0) {
-        throw new Error("Amount must be greater than 0")
+        throw new Error("Amount must be greater than 0");
       }
       if (amountNum > MAX_TRANSFER_LIMIT) {
-        throw new Error(`Amount cannot exceed ${MAX_TRANSFER_LIMIT} USDC per transaction`)
+        throw new Error(
+          `Amount cannot exceed ${MAX_TRANSFER_LIMIT} USDC per transaction`
+        );
       }
       if (amountNum > balance) {
-        throw new Error("Insufficient balance")
+        throw new Error("Insufficient balance");
       }
 
-      setCurrentStep(1)
+      setCurrentStep(1);
 
       // Step 2: Initialize Aptos client and build transaction
-      const config = new AptosConfig({ network: Network.TESTNET })
-      const aptos = new Aptos(config)
-      const coinType = process.env.NEXT_PUBLIC_USDC_CONTRACT || "0x3c27315fb69ba6e4b960f1507d1cefcc9a4247869f26a8d59d6b7869d23782c::test_coins::USDC"
-      const relayerAddress = process.env.NEXT_PUBLIC_RELAYER_ADDRESS || "0x5dfe1626d0397e882d80267b614cae3ebdae56a80809f3ddb7ada9d58366060a"
-      const contractAddress = process.env.NEXT_PUBLIC_SMOOTHSEND_CONTRACT || "0x6d88ee2fde204e756874e13f5d5eddebd50725805c0a332ade87d1ef03f9148b"
-      
-      setCurrentStep(2)
+      const config = new AptosConfig({ network: Network.TESTNET });
+      const aptos = new Aptos(config);
+      const coinType =
+        process.env.NEXT_PUBLIC_USDC_CONTRACT ||
+        "0x3c27315fb69ba6e4b960f1507d1cefcc9a4247869f26a8d59d6b7869d23782c::test_coins::USDC";
+      const relayerAddress =
+        process.env.NEXT_PUBLIC_RELAYER_ADDRESS ||
+        "0x5dfe1626d0397e882d80267b614cae3ebdae56a80809f3ddb7ada9d58366060a";
+      const contractAddress =
+        process.env.NEXT_PUBLIC_SMOOTHSEND_CONTRACT ||
+        "0x6d88ee2fde204e756874e13f5d5eddebd50725805c0a332ade87d1ef03f9148b";
+
+      setCurrentStep(2);
 
       // Step 3: Get dynamic relayer fee from backend
-      const amountInMicroUSDC = (amountNum * 1_000_000).toString()
+      const amountInMicroUSDC = (amountNum * 1_000_000).toString();
       const quoteResponse = await apiService.getGaslessQuote({
         fromAddress: account.address.toString(),
         toAddress: recipient,
         amount: amountInMicroUSDC,
-        coinType: coinType
-      })
+        coinType: coinType,
+      });
 
       if (!quoteResponse.success || !quoteResponse.quote) {
-        throw new Error("Failed to get fee quote from backend")
+        throw new Error("Failed to get fee quote from backend");
       }
 
-      const dynamicRelayerFee = quoteResponse.quote.relayerFee
-      console.log(`Using dynamic relayer fee: ${dynamicRelayerFee} micro-USDC (${(parseInt(dynamicRelayerFee) / 1e6).toFixed(6)} USDC)`)
+      const dynamicRelayerFee = quoteResponse.quote.relayerFee;
+      console.log(
+        `Using dynamic relayer fee: ${dynamicRelayerFee} micro-USDC (${(
+          parseInt(dynamicRelayerFee) / 1e6
+        ).toFixed(6)} USDC)`
+      );
 
-      setCurrentStep(3)
+      setCurrentStep(3);
 
       // Step 4: Build the transaction using SmoothSend contract with dynamic fee
       const rawTransaction = await aptos.transaction.build.simple({
@@ -155,96 +195,105 @@ export function TransferForm() {
             relayerAddress,
             recipient,
             amountInMicroUSDC, // Amount in micro-USDC
-            dynamicRelayerFee // Dynamic relayer fee from backend
-          ]
+            dynamicRelayerFee, // Dynamic relayer fee from backend
+          ],
         },
         options: {
           maxGasAmount: 5000,
-          gasUnitPrice: 100
-        }
-      })
+          gasUnitPrice: 100,
+        },
+      });
 
-      setCurrentStep(4)
+      setCurrentStep(4);
 
       // Step 5: Sign the transaction with user's wallet
-      const response = await signTransaction({ transactionOrPayload: rawTransaction })
-        
+      const response = await signTransaction({
+        transactionOrPayload: rawTransaction,
+      });
+
       if (!response) {
-        throw new Error("Failed to sign transaction")
+        throw new Error("Failed to sign transaction");
       }
 
-      setCurrentStep(5)
+      setCurrentStep(5);
 
       // Step 6: Serialize for backend submission
-      const transactionBytes = rawTransaction.bcsToBytes()
-      const authenticatorBytes = response.authenticator.bcsToBytes()
+      const transactionBytes = rawTransaction.bcsToBytes();
+      const authenticatorBytes = response.authenticator.bcsToBytes();
 
       // Step 7: Submit to gasless relayer
       const resultData = await apiService.submitGaslessWithWallet({
         transactionBytes: Array.from(transactionBytes),
         authenticatorBytes: Array.from(authenticatorBytes),
-        functionName: "send_with_fee"
-      })
+        functionName: "send_with_fee",
+      });
 
       // Step 8: Process the result
-      setCurrentStep(6)
-      
+      setCurrentStep(6);
+
       if (resultData.success && resultData.txnHash) {
-        setCurrentStep(7) // Final confirmation step
-        setTransactionHash(resultData.txnHash)
-        setShowSuccess(true)
-        
+        setCurrentStep(7); // Final confirmation step
+        setTransactionHash(resultData.txnHash);
+        setShowSuccess(true);
+
         toast({
           title: "Gasless Transaction Successful! 🎉",
           description: `Sent ${amount} USDC with sponsored gas fees!`,
-        })
-        
-        // Reset form
-        setRecipient("")
-        setAmount("")
-      } else {
-        throw new Error(resultData.error || "Transaction failed")
-      }
+        });
 
-    } catch (error: any) {
-      console.error("Transaction error:", error)
-      
+        // Reset form
+        setRecipient("");
+        setAmount("");
+      } else {
+        throw new Error(resultData.error || "Transaction failed");
+      }
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.error("Transaction error:", error);
+
       // Enhanced error handling for v2 contract errors
-      const errorMessage = handleContractError(error) || error.message || "Something went wrong"
-      
+      const errorMessage =
+        handleContractError(error) || error.message || "Something went wrong";
+
       toast({
         title: "Transaction Failed",
         description: errorMessage,
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsSubmitting(false)
-      setCurrentStep(0)
+      setIsSubmitting(false);
+      setCurrentStep(0);
     }
-  }
+  };
 
   const handleMaxClick = async () => {
-    if (!account?.address) return
+    if (!account?.address) return;
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/relayer/balance/${account.address.toString()}`)
+      const response = await fetch(
+        `${
+          process.env.NEXT_PUBLIC_API_URL
+        }/api/v1/relayer/balance/${account.address.toString()}`
+      );
       if (response.ok) {
-        const balanceData = await response.json()
+        const balanceData = await response.json();
         if (balanceData.success) {
-          setBalance(balanceData.balance)
+          setBalance(balanceData.balance);
           // Set amount to minimum of balance and max transfer limit
-          const maxAmount = Math.min(balanceData.balance, MAX_TRANSFER_LIMIT)
-          setAmount(maxAmount.toString())
+          const maxAmount = Math.min(balanceData.balance, MAX_TRANSFER_LIMIT);
+          setAmount(maxAmount.toString());
         }
       } else {
-        throw new Error("Failed to fetch balance")
+        throw new Error("Failed to fetch balance");
       }
-    } catch (error) {
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.error(error);
       // Use demo values for testnet
-      setBalance(2868.82)
-      setAmount(MAX_TRANSFER_LIMIT.toString())
+      setBalance(2868.82);
+      setAmount(MAX_TRANSFER_LIMIT.toString());
     }
-  }
+  };
 
   const steps = [
     "Validating transaction",

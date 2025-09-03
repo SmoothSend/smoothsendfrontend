@@ -5,15 +5,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Mail, Twitter, CheckCircle, AlertCircle, Loader2 } from "lucide-react"
+import { Mail, Twitter, CheckCircle, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { apiService } from "../lib/api-service"
-
-interface SignupData {
-  email: string
-  twitter?: string
-  walletAddress?: string
-}
 
 export function EmailSignup() {
   const [email, setEmail] = useState("")
@@ -87,10 +81,10 @@ export function EmailSignup() {
             </div>
             <div>
               <h3 className="text-lg font-semibold text-green-800 dark:text-green-200">
-                You're on the list! 🚀
+                You&apos;re on the list! 🚀
               </h3>
               <p className="text-green-600 dark:text-green-300 mt-1">
-                We'll notify you when SmoothSend mainnet launches
+                We&apos;ll notify you when SmoothSend mainnet launches
               </p>
             </div>
             <Button 
@@ -190,7 +184,7 @@ export function EmailSignup() {
         </form>
 
         <div className="text-xs text-gray-500 dark:text-gray-400 text-center pt-2 border-t border-gray-200 dark:border-gray-700">
-          We'll only email you about SmoothSend mainnet updates. No spam! 📧
+          We&apos;ll only email you about SmoothSend mainnet updates. No spam! 📧
         </div>
       </CardContent>
     </Card>

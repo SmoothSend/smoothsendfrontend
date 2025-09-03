@@ -5,7 +5,16 @@ import { Button } from "@/components/ui/button"
 import { RefreshCw, Activity, TrendingUp, CheckCircle, Zap } from "lucide-react"
 
 export function StatsDisplay() {
-  const [stats, setStats] = useState<any>(null)
+  const [stats, setStats] = useState<{
+    isActive: boolean;
+    totalTransactions: number;
+    successfulTransactions: number;
+    failedTransactions: number;
+    successRate: string;
+    aptBalance: string;
+    totalRevenue: string;
+    uptime: string;
+  } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -37,7 +46,9 @@ export function StatsDisplay() {
       }
       
       setStats(transformedStats)
-    } catch (error: any) {
+    } catch (err: unknown) {
+      const error = err as Error;
+      setError(error.message);
       // For demo purposes, use mock stats
       setStats({
         isActive: true,

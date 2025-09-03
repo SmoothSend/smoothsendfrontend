@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Badge } from "@/components/ui/badge"
-import { Wifi, WifiOff, Server, Globe } from "lucide-react"
+import { WifiOff, Server, Globe } from "lucide-react"
 
 export function NetworkStatus() {
   const [isOnline, setIsOnline] = useState(true)
@@ -22,7 +22,7 @@ export function NetworkStatus() {
         } else {
           setRelayerStatus("offline")
         }
-      } catch (error) {
+      } catch {
         setRelayerStatus("offline")
       }
     }

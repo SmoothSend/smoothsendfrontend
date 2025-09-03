@@ -1,26 +1,27 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { RefreshCw, TrendingUp, TrendingDown, DollarSign } from "lucide-react"
-import { apiService } from "../lib/api-service"
+import { apiService, LimitsResponse } from "../lib/api-service"
 import { useToast } from "@/hooks/use-toast"
 
 export function LimitsDisplay() {
-  const [limits, setLimits] = useState<any>(null)
+  const [limits, setLimits] = useState<LimitsResponse | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { toast } = useToast()
 
-  const fetchLimits = async () => {
+  const fetchLimits = useCallback(async () => {
     setIsLoading(true)
     setError(null)
 
     try {
       const limitsData = await apiService.getLimits()
       setLimits(limitsData)
-    } catch (error: any) {
+    } catch (err: unknown) {
+      const error = err as Error;
       console.error("Failed to fetch limits:", error)
       setError(error.message || "Failed to fetch limits")
       toast({
@@ -31,11 +32,11 @@ export function LimitsDisplay() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [toast])
 
   useEffect(() => {
     fetchLimits()
-  }, [])
+  }, [fetchLimits])
 
   if (error) {
     return (

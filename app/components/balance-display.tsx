@@ -1,61 +1,61 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useWallet } from "@aptos-labs/wallet-adapter-react"
-import { Button } from "@/components/ui/button"
-import { RefreshCw, DollarSign, AlertCircle, TrendingUp } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+import { useState, useEffect, useCallback } from "react";
+import { useWallet } from "@aptos-labs/wallet-adapter-react";
+import { Button } from "@/components/ui/button";
+import { RefreshCw, DollarSign, TrendingUp } from "lucide-react";
 
 interface BalanceData {
-  usdc: number
-  apt: number
+  usdc: number;
+  apt: number;
 }
 
 export function BalanceDisplay() {
-  const { account } = useWallet()
-  const [balances, setBalances] = useState<BalanceData | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
-  const { toast } = useToast()
+  const { account } = useWallet();
+  const [balances, setBalances] = useState<BalanceData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
-  const fetchBalances = async () => {
-    if (!account?.address) return
+  const fetchBalances = useCallback(async () => {
+    if (!account?.address) return;
 
-    setIsLoading(true)
-    setError(null)
+    setIsLoading(true);
 
     try {
       // Fetch USDC balance
-      const usdcResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/relayer/balance/${account.address.toString()}`)
-      
-      let usdcBalance = 0
+      const usdcResponse = await fetch(
+        `${
+          process.env.NEXT_PUBLIC_API_URL
+        }/api/v1/relayer/balance/${account.address.toString()}`
+      );
+
+      let usdcBalance = 0;
       if (usdcResponse.ok) {
-        const usdcData = await usdcResponse.json()
+        const usdcData = await usdcResponse.json();
         if (usdcData.success) {
-          usdcBalance = usdcData.balance
+          usdcBalance = usdcData.balance;
         }
       }
 
       // For APT balance, set to 0 as requested
-      const aptBalance = 0
+      const aptBalance = 0;
 
       setBalances({
-        usdc: usdcBalance || (1250.75 + Math.random() * 100), // Demo USDC balance if endpoint fails
-        apt: aptBalance
-      })
-      setLastUpdated(new Date())
-    } catch (error: any) {
+        usdc: usdcBalance || 1250.75 + Math.random() * 100, // Demo USDC balance if endpoint fails
+        apt: aptBalance,
+      });
+      setLastUpdated(new Date());
+    } catch {
       // Demo balances for testnet
       setBalances({
         usdc: 1250.75 + Math.random() * 100,
-        apt: 0
-      })
-      setLastUpdated(new Date())
+        apt: 0,
+      });
+      setLastUpdated(new Date());
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  }, [account?.address]);
 
   useEffect(() => {
     if (account?.address) {
@@ -65,7 +65,7 @@ export function BalanceDisplay() {
       const interval = setInterval(fetchBalances, 30000)
       return () => clearInterval(interval)
     }
-  }, [account?.address])
+  }, [account?.address, fetchBalances])
 
   return (
     <div className="space-y-4">

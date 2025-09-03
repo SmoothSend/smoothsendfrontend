@@ -1,27 +1,29 @@
-"use client"
+"use client";
 
-import { useWallet } from "@aptos-labs/wallet-adapter-react"
-import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Wallet, Smartphone, Shield, Zap } from "lucide-react"
-import { useState } from "react"
+import { useWallet } from "@aptos-labs/wallet-adapter-react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Wallet, Smartphone, Shield, Zap } from "lucide-react";
+import { useState } from "react";
+import Image from "next/image";
 
 export function WalletConnection() {
-  const { connect, wallets } = useWallet()
-  const [isConnecting, setIsConnecting] = useState(false)
+  const { connect, wallets } = useWallet();
+  const [isConnecting, setIsConnecting] = useState(false);
 
   const handleConnect = async (walletName: string) => {
-    setIsConnecting(true)
+    setIsConnecting(true);
     try {
-      await connect(walletName)
+      await connect(walletName);
     } catch (error) {
-      console.error("Failed to connect:", error)
+      console.error("Failed to connect:", error);
     } finally {
-      setIsConnecting(false)
+      setIsConnecting(false);
     }
-  }
+  };
 
-  const availableWallets = wallets?.filter(wallet => wallet.readyState === "Installed") || []
+  const availableWallets =
+    wallets?.filter((wallet) => wallet.readyState === "Installed") || [];
 
   return (
     <Card className="w-full max-w-md p-8 bg-white/5 backdrop-blur-xl border-white/10 rounded-3xl">
@@ -44,12 +46,19 @@ export function WalletConnection() {
               variant="ghost"
             >
               <div className="flex items-center justify-center space-x-4 w-full">
-                <img src={wallet.icon} alt={wallet.name} className="w-8 h-8" />
+                <Image
+                  src={wallet.icon}
+                  alt={wallet.name}
+                  width={32}
+                  height={32}
+                />
                 <div className="flex-1 text-center">
                   <div className="flex items-center justify-center space-x-2">
                     <span className="font-semibold">{wallet.name}</span>
                   </div>
-                  <p className="text-sm opacity-70">Connect with {wallet.name}</p>
+                  <p className="text-sm opacity-70">
+                    Connect with {wallet.name}
+                  </p>
                 </div>
                 {isConnecting && (
                   <div className="w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
@@ -59,17 +68,21 @@ export function WalletConnection() {
           ))
         ) : (
           <div className="text-center py-4">
-            <p className="text-slate-300 mb-4">No wallets detected. Please install a wallet:</p>
+            <p className="text-slate-300 mb-4">
+              No wallets detected. Please install a wallet:
+            </p>
             <div className="space-y-2">
               <Button
-                onClick={() => window.open('https://petra.app/', '_blank')}
+                onClick={() => window.open("https://petra.app/", "_blank")}
                 className="w-full p-3 rounded-xl bg-white/10 hover:bg-white/20 text-white"
                 variant="ghost"
               >
                 Install Petra Wallet
               </Button>
               <Button
-                onClick={() => window.open('https://martianwallet.xyz/', '_blank')}
+                onClick={() =>
+                  window.open("https://martianwallet.xyz/", "_blank")
+                }
                 className="w-full p-3 rounded-xl bg-white/10 hover:bg-white/20 text-white"
                 variant="ghost"
               >
@@ -95,5 +108,5 @@ export function WalletConnection() {
         </div>
       </div>
     </Card>
-  )
+  );
 }

@@ -23,85 +23,93 @@ export function useWallet() {
 }
 
 interface WalletProviderProps {
-  children: ReactNode
+  children: ReactNode;
+}
+
+// A generic interface for a wallet object that might exist on the window
+interface WindowWallet {
+  connect: () => Promise<{ address: string }>;
 }
 
 export function WalletProvider({ children }: WalletProviderProps) {
-  const [isConnected, setIsConnected] = useState(false)
-  const [address, setAddress] = useState<string | null>(null)
-  const [walletName, setWalletName] = useState<string | null>(null)
-  const [isConnecting, setIsConnecting] = useState(false)
-  const { toast } = useToast()
+  const [isConnected, setIsConnected] = useState(false);
+  const [address, setAddress] = useState<string | null>(null);
+  const [walletName, setWalletName] = useState<string | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const { toast } = useToast();
 
   const connect = async (walletType: string) => {
-    setIsConnecting(true)
+    setIsConnecting(true);
 
     try {
       // For testnet mode, we use the hardcoded testnet account
       if (walletType === "testnet") {
-        const testnetAddress = process.env.NEXT_PUBLIC_TESTNET_SENDER_ADDRESS
+        const testnetAddress = process.env.NEXT_PUBLIC_TESTNET_SENDER_ADDRESS;
 
         if (!testnetAddress) {
-          throw new Error("Testnet address not configured")
+          throw new Error("Testnet address not configured");
         }
 
-        setAddress(testnetAddress)
-        setWalletName("Testnet Account")
-        setIsConnected(true)
+        setAddress(testnetAddress);
+        setWalletName("Testnet Account");
+        setIsConnected(true);
 
         // Store connection state
-        localStorage.setItem("wallet_connected", "true")
-        localStorage.setItem("wallet_address", testnetAddress)
-        localStorage.setItem("wallet_type", "testnet")
+        localStorage.setItem("wallet_connected", "true");
+        localStorage.setItem("wallet_address", testnetAddress);
+        localStorage.setItem("wallet_type", "testnet");
 
         toast({
           title: "Connected to Testnet",
           description: "Successfully connected with pre-funded testnet account",
-        })
-        return
+        });
+        return;
       }
 
       // Legacy wallet connection code (for production use)
-      const walletObj = (window as any)[walletType.toLowerCase()]
+      const walletObj = (window as unknown as {
+        [key: string]: WindowWallet | undefined;
+      })[walletType.toLowerCase()];
 
       if (!walletObj) {
         toast({
           title: "Wallet Not Found",
           description: `${walletType} wallet is not installed. Please install it first.`,
           variant: "destructive",
-        })
-        return
+        });
+        return;
       }
 
       // Connect to wallet
-      const response = await walletObj.connect()
+      const response = await walletObj.connect();
 
       if (response.address) {
-        setAddress(response.address)
-        setWalletName(walletType)
-        setIsConnected(true)
+        setAddress(response.address);
+        setWalletName(walletType);
+        setIsConnected(true);
 
         // Store connection state
-        localStorage.setItem("wallet_connected", "true")
-        localStorage.setItem("wallet_address", response.address)
-        localStorage.setItem("wallet_type", walletType)
+        localStorage.setItem("wallet_connected", "true");
+        localStorage.setItem("wallet_address", response.address);
+        localStorage.setItem("wallet_type", walletType);
 
         toast({
           title: "Wallet Connected",
           description: `Successfully connected to ${walletType}`,
-        })
+        });
       }
-    } catch (error: any) {
-      console.error("Failed to connect wallet:", error)
+    } catch (err: unknown) {
+      const error = err as Error;
+      console.error("Failed to connect wallet:", error);
       toast({
         title: "Connection Failed",
         description: error.message || "Failed to connect to wallet",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsConnecting(false)
+      setIsConnecting(false);
     }
-  }
+  };
 
   const disconnect = () => {
     setIsConnected(false)

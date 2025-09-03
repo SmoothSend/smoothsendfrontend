@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { LogOut, Wallet, DollarSign, Activity, Moon, Sun, Mail, ExternalLink } from "lucide-react"
 import { StatsDisplay } from "./stats-display"
+import Image from "next/image"
 
 export function MainApp() {
   const { connected, account, disconnect } = useWallet()
@@ -44,9 +45,11 @@ export function MainApp() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2 sm:space-x-3">
               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-white flex items-center justify-center modern-shadow">
-                <img 
-                  src="/smoothsend-logo.png" 
-                  alt="SmoothSend" 
+                <Image
+                  src="/smoothsend-logo.png"
+                  alt="SmoothSend"
+                  width={32}
+                  height={32}
                   className="w-6 h-6 sm:w-8 sm:h-8 object-contain"
                 />
               </div>
@@ -100,9 +103,11 @@ export function MainApp() {
             <Card className="glass-effect modern-shadow-lg border-0">
               <CardHeader className="text-center pb-4">
                 <div className="w-16 h-16 rounded-2xl bg-white flex items-center justify-center mx-auto mb-4 modern-shadow">
-                  <img 
-                    src="/smoothsend-logo.png" 
-                    alt="SmoothSend" 
+                  <Image
+                    src="/smoothsend-logo.png"
+                    alt="SmoothSend"
+                    width={48}
+                    height={48}
                     className="w-12 h-12 object-contain"
                   />
                 </div>
@@ -147,7 +152,7 @@ export function MainApp() {
                         </div>
                       </div>
                       <p className="text-xs text-blue-500 dark:text-blue-400 mt-2">
-                        💡 Paste this address in the "To Address" field to test transfers
+                        💡 Paste this address in the &quot;To Address&quot; field to test transfers
                       </p>
                     </div>
                   </div>
@@ -310,9 +315,11 @@ export function MainApp() {
         <div className="container mx-auto px-4 py-6 sm:py-8 text-center">
           <div className="flex items-center justify-center space-x-2 mb-2">
             <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-lg bg-white flex items-center justify-center">
-              <img 
-                src="/smoothsend-logo.png" 
-                alt="SmoothSend" 
+              <Image
+                src="/smoothsend-logo.png"
+                alt="SmoothSend"
+                width={16}
+                height={16}
                 className="w-3 h-3 sm:w-4 sm:h-4 object-contain"
               />
             </div>

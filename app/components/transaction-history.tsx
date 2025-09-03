@@ -1,22 +1,12 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useWallet } from "./wallet-provider"
+import { Transaction } from "../lib/types"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { History, ExternalLink, CheckCircle, Clock, XCircle, RefreshCw } from "lucide-react"
 import { apiService } from "../lib/api-service"
-
-interface Transaction {
-  hash: string
-  type: "send" | "receive"
-  amount: number
-  recipient: string
-  sender: string
-  status: "pending" | "success" | "failed"
-  timestamp: string
-  blockHeight?: number
-}
 
 export function TransactionHistory() {
   const { address } = useWallet()
@@ -24,7 +14,7 @@ export function TransactionHistory() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchTransactions = async () => {
+  const fetchTransactions = useCallback(async () => {
     if (!address) return
 
     setIsLoading(true)
@@ -63,7 +53,8 @@ export function TransactionHistory() {
       } else {
         setTransactions(txData.transactions)
       }
-    } catch (error: any) {
+    } catch (err: unknown) {
+      const error = err as Error;
       console.error("Failed to fetch transactions:", error)
       setError(error.message || "Failed to fetch transaction history")
       
@@ -72,7 +63,7 @@ export function TransactionHistory() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [address])
 
   useEffect(() => {
     if (address) {
@@ -82,7 +73,7 @@ export function TransactionHistory() {
       const interval = setInterval(fetchTransactions, 30000)
       return () => clearInterval(interval)
     }
-  }, [address])
+  }, [address, fetchTransactions])
 
   const getStatusIcon = (status: string) => {
     switch (status) {
