@@ -3,7 +3,8 @@
 import type React from "react"
 
 import { useState, useEffect } from "react"
-import { useWallet } from "./wallet-provider"
+import { useWallet } from "@aptos-labs/wallet-adapter-react"
+import { Aptos, AptosConfig, Network, buildTransaction, UserTransactionResponse } from "@aptos-labs/ts-sdk"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,10 +14,10 @@ import { useToast } from "@/hooks/use-toast"
 import { apiService } from "../lib/api-service"
 import { TransactionProgress } from "./transaction-progress"
 import { ValidationHelpers, handleContractError } from "../lib/contract-errors"
-import { RELAYER_ADDRESS } from "../lib/constants"
+import { RELAYER_ADDRESS, API_ENDPOINTS } from "../lib/constants"
 
 export function TransferForm() {
-  const { address } = useWallet()
+  const { account, signTransaction } = useWallet()
   const [recipient, setRecipient] = useState("")
   const [amount, setAmount] = useState("")
   const [slippage, setSlippage] = useState(10)
@@ -44,7 +45,7 @@ export function TransferForm() {
     }
     
     // v2 Security validations
-    if (address && ValidationHelpers.isSelfTransfer(address, recipient, RELAYER_ADDRESS)) {
+    if (account?.address && ValidationHelpers.isSelfTransfer(account.address.toString(), recipient, RELAYER_ADDRESS)) {
       errors.push("Cannot transfer to yourself or the relayer")
     }
     
@@ -66,10 +67,10 @@ export function TransferForm() {
   // Fetch balance on component mount
   useEffect(() => {
     const fetchBalance = async () => {
-      if (!address) return
+      if (!account?.address) return
       
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/relayer/balance/${address}`)
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/relayer/balance/${account.address.toString()}`)
         if (response.ok) {
           const balanceData = await response.json()
           if (balanceData.success) {
@@ -83,66 +84,14 @@ export function TransferForm() {
     }
     
     fetchBalance()
-  }, [address])
+  }, [account?.address])
 
-  // For testnet production - get user signature
-  const getUserSignatureForTestnet = async (userAddress: string) => {
-    // In testnet production, users can provide their private key for testing
-    // In mainnet, this would integrate with actual wallet extensions
-    
-    // Get testnet private key from environment variables
-    const testPrivateKey = process.env.NEXT_PUBLIC_TESTNET_SENDER_PRIVATE_KEY
-    
-    if (!testPrivateKey) {
-      throw new Error('Testnet sender private key not configured in environment variables')
-    }
-    
-    // The backend expects a signature object but will handle the actual signing
-    // for testnet production deployment
-    return {
-      signature: testPrivateKey, // Backend will use this for testnet signing
-      publicKey: "" // Empty string for testnet mode
-    }
-  }  // Get live quote when amount/recipient changes
-  useEffect(() => {
-    const getQuote = async () => {
-      if (!address || !recipient || !amount || !isValidAddress || !isValidAmount) {
-        setCurrentQuote(null)
-        return
-      }
-
-      try {
-        const amountNum = parseFloat(amount)
-        const coinType = process.env.NEXT_PUBLIC_USDC_CONTRACT || "0x3c27315fb69ba6e4b960f1507d1cefcc9a4247869f26a8d59d6b7869d23782c::test_coins::USDC"
-        
-        // Use testnet account for all operations
-        const testAccountAddress = process.env.NEXT_PUBLIC_TESTNET_SENDER_ADDRESS
-        
-        if (!testAccountAddress) {
-          console.error("Testnet sender address not configured")
-          return
-        }
-        
-        const quote = await apiService.getGaslessQuote({
-          fromAddress: testAccountAddress, // Always use testnet account from env
-          toAddress: recipient,
-          amount: (amountNum * 1_000_000).toString(),
-          coinType
-        })
-
-        setCurrentQuote(quote)
-      } catch (error) {
-        setCurrentQuote(null)
-      }
-    }
-
-    const timeoutId = setTimeout(getQuote, 500) // Debounce
-    return () => clearTimeout(timeoutId)
-  }, [address, recipient, amount, isValidAddress, isValidAmount])
+  // Note: We don't need to fetch quotes upfront since the gasless endpoint handles it internally
+  // useEffect removed for simplified gasless flow
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!recipient || !amount || !address) return
+    if (!recipient || !amount || !account?.address) return
 
     setIsSubmitting(true)
     setCurrentStep(0)
@@ -168,57 +117,93 @@ export function TransferForm() {
 
       setCurrentStep(1)
 
-      // Step 2: Get quote for gasless transaction (user pays USDC fees)
+      // Step 2: Initialize Aptos client and build transaction
+      const config = new AptosConfig({ network: Network.TESTNET })
+      const aptos = new Aptos(config)
       const coinType = process.env.NEXT_PUBLIC_USDC_CONTRACT || "0x3c27315fb69ba6e4b960f1507d1cefcc9a4247869f26a8d59d6b7869d23782c::test_coins::USDC"
-      // Use the same testnet sender throughout (quote + signing + submit)
-      const testnetSenderAddress = process.env.NEXT_PUBLIC_TESTNET_SENDER_ADDRESS
-      if (!testnetSenderAddress) {
-        throw new Error('Testnet sender address not configured in environment variables')
-      }
+      const relayerAddress = process.env.NEXT_PUBLIC_RELAYER_ADDRESS || "0x5dfe1626d0397e882d80267b614cae3ebdae56a80809f3ddb7ada9d58366060a"
+      const contractAddress = process.env.NEXT_PUBLIC_SMOOTHSEND_CONTRACT || "0x6d88ee2fde204e756874e13f5d5eddebd50725805c0a332ade87d1ef03f9148b"
       
-      const quote = await apiService.getGaslessQuote({
-        fromAddress: testnetSenderAddress,
-        toAddress: recipient,
-        amount: (amountNum * 1_000_000).toString(),
-        coinType
-      })
-
-      setCurrentQuote(quote)
       setCurrentStep(2)
 
-      // Step 3: Get testnet account signature
-      setCurrentStep(3)
-
-      // Get testnet account signature (users don't need wallets)
-      const testnetSignature = await getUserSignatureForTestnet(testnetSenderAddress)
-
-      // Step 4: Submit gasless transaction with testnet signature
-      setCurrentStep(4)
-      const result = await apiService.submitGaslessTransaction({
-        transaction: quote.transactionData, // Use transaction data from quote
-        userSignature: testnetSignature, // Testnet account signature
-        fromAddress: testnetSenderAddress, // Use testnet account address from env
+      // Step 3: Get dynamic relayer fee from backend
+      const amountInMicroUSDC = (amountNum * 1_000_000).toString()
+      const quoteResponse = await apiService.getGaslessQuote({
+        fromAddress: account.address.toString(),
         toAddress: recipient,
-        amount: (amountNum * 1_000_000).toString(),
-        coinType,
-        relayerFee: quote.quote.relayerFee
+        amount: amountInMicroUSDC,
+        coinType: coinType
       })
 
-      if (result.success && result.hash) {
-        setCurrentStep(5) // Final confirmation step
-        setTransactionHash(result.hash)
+      if (!quoteResponse.success || !quoteResponse.quote) {
+        throw new Error("Failed to get fee quote from backend")
+      }
+
+      const dynamicRelayerFee = quoteResponse.quote.relayerFee
+      console.log(`Using dynamic relayer fee: ${dynamicRelayerFee} micro-USDC (${(parseInt(dynamicRelayerFee) / 1e6).toFixed(6)} USDC)`)
+
+      setCurrentStep(3)
+
+      // Step 4: Build the transaction using SmoothSend contract with dynamic fee
+      const rawTransaction = await aptos.transaction.build.simple({
+        sender: account.address,
+        withFeePayer: true, // Important: This allows the relayer to pay gas
+        data: {
+          function: `${contractAddress}::smoothsend::send_with_fee`,
+          typeArguments: [coinType],
+          functionArguments: [
+            relayerAddress,
+            recipient,
+            amountInMicroUSDC, // Amount in micro-USDC
+            dynamicRelayerFee // Dynamic relayer fee from backend
+          ]
+        },
+        options: {
+          maxGasAmount: 5000,
+          gasUnitPrice: 100
+        }
+      })
+
+      setCurrentStep(4)
+
+      // Step 5: Sign the transaction with user's wallet
+      const response = await signTransaction({ transactionOrPayload: rawTransaction })
+        
+      if (!response) {
+        throw new Error("Failed to sign transaction")
+      }
+
+      setCurrentStep(5)
+
+      // Step 6: Serialize for backend submission
+      const transactionBytes = rawTransaction.bcsToBytes()
+      const authenticatorBytes = response.authenticator.bcsToBytes()
+
+      // Step 7: Submit to gasless relayer
+      const resultData = await apiService.submitGaslessWithWallet({
+        transactionBytes: Array.from(transactionBytes),
+        authenticatorBytes: Array.from(authenticatorBytes),
+        functionName: "send_with_fee"
+      })
+
+      // Step 8: Process the result
+      setCurrentStep(6)
+      
+      if (resultData.success && resultData.txnHash) {
+        setCurrentStep(7) // Final confirmation step
+        setTransactionHash(resultData.txnHash)
         setShowSuccess(true)
         
         toast({
           title: "Gasless Transaction Successful! 🎉",
-          description: `Sent ${amount} USDC! You paid a small USDC fee (${(parseFloat(quote.quote.relayerFee) / 1_000_000).toFixed(6)} USDC) instead of APT gas.`,
+          description: `Sent ${amount} USDC with sponsored gas fees!`,
         })
         
         // Reset form
         setRecipient("")
         setAmount("")
       } else {
-        throw new Error(result.error || "Transaction failed")
+        throw new Error(resultData.error || "Transaction failed")
       }
 
     } catch (error: any) {
@@ -239,10 +224,10 @@ export function TransferForm() {
   }
 
   const handleMaxClick = async () => {
-    if (!address) return
+    if (!account?.address) return
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/relayer/balance/${address}`)
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/relayer/balance/${account.address.toString()}`)
       if (response.ok) {
         const balanceData = await response.json()
         if (balanceData.success) {
@@ -262,9 +247,13 @@ export function TransferForm() {
   }
 
   const steps = [
-    "Getting quote with USDC fees",
-    "Submitting gasless transaction",
-    "Processing on Aptos network"
+    "Validating transaction",
+    "Building SmoothSend transaction",
+    "Signing with wallet",
+    "Serializing transaction",
+    "Submitting to relayer",
+    "Processing on blockchain",
+    "Transaction confirmed"
   ]
 
   if (showSuccess) {
@@ -272,7 +261,7 @@ export function TransferForm() {
       <Card className="p-8 bg-gradient-to-r from-green-500/10 to-emerald-500/10 backdrop-blur-xl border-green-500/20 rounded-3xl text-center">
         <CheckCircle className="w-16 h-16 text-green-400 mx-auto mb-4" />
         <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Gasless Transaction Successful! 🎉</h3>
-        <p className="text-gray-600 dark:text-gray-300 mb-4">Your USDC has been sent! You paid a small USDC fee instead of APT gas.</p>
+        <p className="text-gray-600 dark:text-gray-300 mb-4">Your USDC has been sent with sponsored gas fees using our relayer!</p>
         {transactionHash && (
           <Button
             onClick={() =>
@@ -416,15 +405,18 @@ export function TransferForm() {
           <div className="flex justify-between text-sm">
             <span className="text-gray-600 dark:text-gray-400">Relayer Fee</span>
             <span className="text-orange-500 dark:text-orange-400">
-              {currentQuote ? `${(parseFloat(currentQuote.quote.relayerFee) / 1_000_000).toFixed(6)} USDC` : "~0.01 USDC (10% markup)"}
+              ~0.01 USDC (10% markup)
             </span>
           </div>
           <div className="border-t border-gray-200 dark:border-gray-700 pt-2 flex justify-between">
             <span className="text-gray-900 dark:text-gray-100 font-medium">You Pay</span>
             <span className="text-gray-900 dark:text-gray-100 font-medium">
-              {amount || "0"} USDC + {currentQuote ? `${(parseFloat(currentQuote.quote.relayerFee) / 1_000_000).toFixed(6)} USDC` : "fee"}
+              {amount || "0"} USDC + fee
             </span>
           </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+            Exact fee calculated at transaction time
+          </p>
         </div>
 
         <Button

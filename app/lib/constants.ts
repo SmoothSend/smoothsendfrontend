@@ -21,6 +21,7 @@ export const API_ENDPOINTS = {
   STATS: "/stats",
   GASLESS_QUOTE: "/gasless/quote",
   GASLESS_SUBMIT: "/gasless/submit",
+  GASLESS_WALLET_SERIALIZED: "/gasless-wallet-serialized",
   // Legacy endpoints (not used in gasless flow)
   BALANCE: "/balance",
   NONCE: "/nonce",

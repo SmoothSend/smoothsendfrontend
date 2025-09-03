@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useWallet } from "./wallet-provider"
+import { useWallet } from "@aptos-labs/wallet-adapter-react"
 import { Button } from "@/components/ui/button"
 import { RefreshCw, DollarSign, AlertCircle, TrendingUp } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
@@ -12,7 +12,7 @@ interface BalanceData {
 }
 
 export function BalanceDisplay() {
-  const { address } = useWallet()
+  const { account } = useWallet()
   const [balances, setBalances] = useState<BalanceData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -20,14 +20,14 @@ export function BalanceDisplay() {
   const { toast } = useToast()
 
   const fetchBalances = async () => {
-    if (!address) return
+    if (!account?.address) return
 
     setIsLoading(true)
     setError(null)
 
     try {
       // Fetch USDC balance
-      const usdcResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/relayer/balance/${address}`)
+      const usdcResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/relayer/balance/${account.address.toString()}`)
       
       let usdcBalance = 0
       if (usdcResponse.ok) {
@@ -58,14 +58,14 @@ export function BalanceDisplay() {
   }
 
   useEffect(() => {
-    if (address) {
+    if (account?.address) {
       fetchBalances()
 
       // Auto-refresh every 30 seconds
       const interval = setInterval(fetchBalances, 30000)
       return () => clearInterval(interval)
     }
-  }, [address])
+  }, [account?.address])
 
   return (
     <div className="space-y-4">

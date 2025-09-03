@@ -1,16 +1,27 @@
 "use client"
 
-import { useWallet } from "./wallet-provider"
+import { useWallet } from "@aptos-labs/wallet-adapter-react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Wallet, Smartphone, Shield, Zap } from "lucide-react"
+import { useState } from "react"
 
 export function WalletConnection() {
-  const { connect, isConnecting } = useWallet()
+  const { connect, wallets } = useWallet()
+  const [isConnecting, setIsConnecting] = useState(false)
 
-  const handleConnect = async () => {
-    await connect("testnet")
+  const handleConnect = async (walletName: string) => {
+    setIsConnecting(true)
+    try {
+      await connect(walletName)
+    } catch (error) {
+      console.error("Failed to connect:", error)
+    } finally {
+      setIsConnecting(false)
+    }
   }
+
+  const availableWallets = wallets?.filter(wallet => wallet.readyState === "Installed") || []
 
   return (
     <Card className="w-full max-w-md p-8 bg-white/5 backdrop-blur-xl border-white/10 rounded-3xl">
@@ -19,29 +30,54 @@ export function WalletConnection() {
           <Wallet className="w-8 h-8 text-white" />
         </div>
         <h2 className="text-2xl font-bold text-white mb-2">Connect Wallet</h2>
-        <p className="text-slate-300">Connect to start using SmoothSend testnet</p>
+        <p className="text-slate-300">Connect to start using SmoothSend</p>
       </div>
 
       <div className="space-y-3 mb-8">
-        <Button
-          onClick={handleConnect}
-          disabled={isConnecting}
-          className="w-full p-4 h-auto rounded-2xl border bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 text-white transition-all duration-200"
-          variant="ghost"
-        >
-          <div className="flex items-center justify-center space-x-4 w-full">
-            <div className="text-2xl">🚀</div>
-            <div className="flex-1 text-center">
-              <div className="flex items-center justify-center space-x-2">
-                <span className="font-semibold">Connect to Testnet</span>
+        {availableWallets.length > 0 ? (
+          availableWallets.map((wallet) => (
+            <Button
+              key={wallet.name}
+              onClick={() => handleConnect(wallet.name)}
+              disabled={isConnecting}
+              className="w-full p-4 h-auto rounded-2xl border bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 text-white transition-all duration-200"
+              variant="ghost"
+            >
+              <div className="flex items-center justify-center space-x-4 w-full">
+                <img src={wallet.icon} alt={wallet.name} className="w-8 h-8" />
+                <div className="flex-1 text-center">
+                  <div className="flex items-center justify-center space-x-2">
+                    <span className="font-semibold">{wallet.name}</span>
+                  </div>
+                  <p className="text-sm opacity-70">Connect with {wallet.name}</p>
+                </div>
+                {isConnecting && (
+                  <div className="w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                )}
               </div>
-              <p className="text-sm opacity-70">Pre-funded testnet account</p>
+            </Button>
+          ))
+        ) : (
+          <div className="text-center py-4">
+            <p className="text-slate-300 mb-4">No wallets detected. Please install a wallet:</p>
+            <div className="space-y-2">
+              <Button
+                onClick={() => window.open('https://petra.app/', '_blank')}
+                className="w-full p-3 rounded-xl bg-white/10 hover:bg-white/20 text-white"
+                variant="ghost"
+              >
+                Install Petra Wallet
+              </Button>
+              <Button
+                onClick={() => window.open('https://martianwallet.xyz/', '_blank')}
+                className="w-full p-3 rounded-xl bg-white/10 hover:bg-white/20 text-white"
+                variant="ghost"
+              >
+                Install Martian Wallet
+              </Button>
             </div>
-            {isConnecting && (
-              <div className="w-5 h-5 border-2 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
-            )}
           </div>
-        </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-3 gap-4 text-center">

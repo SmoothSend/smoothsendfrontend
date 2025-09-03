@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useTheme } from "next-themes"
-import { useWallet } from "./wallet-provider"
+import { useWallet } from "@aptos-labs/wallet-adapter-react"
 import { WalletConnection } from "./wallet-connection"
 import { BalanceDisplay } from "./balance-display"
 import { TransferForm } from "./transfer-form"
@@ -15,7 +15,7 @@ import { LogOut, Wallet, DollarSign, Activity, Moon, Sun, Mail, ExternalLink } f
 import { StatsDisplay } from "./stats-display"
 
 export function MainApp() {
-  const { isConnected, address, disconnect } = useWallet()
+  const { connected, account, disconnect } = useWallet()
   const { theme, setTheme } = useTheme()
   const [isLoading, setIsLoading] = useState(true)
 
@@ -95,7 +95,7 @@ export function MainApp() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8 fade-in">
-        {!isConnected ? (
+        {!connected ? (
           <div className="max-w-md mx-auto">
             <Card className="glass-effect modern-shadow-lg border-0">
               <CardHeader className="text-center pb-4">
@@ -200,7 +200,7 @@ export function MainApp() {
                       <p className="text-sm font-medium text-gray-600 dark:text-gray-300">Wallet Status</p>
                       <p className="text-lg font-bold text-gray-900 dark:text-white">Connected</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-1">
-                        {address?.slice(0, 8)}...{address?.slice(-6)}
+                        {account?.address?.toString().slice(0, 8)}...{account?.address?.toString().slice(-6)}
                       </p>
                     </div>
                   </div>
@@ -262,7 +262,7 @@ export function MainApp() {
                   </CardHeader>
                   <CardContent className="pt-0">
                     <p className="text-xs text-gray-500 font-mono bg-gray-50 p-3 rounded-lg break-all mb-4">
-                      {address}
+                      {account?.address?.toString()}
                     </p>
                     <Button 
                       onClick={disconnect} 

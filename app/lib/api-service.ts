@@ -1,6 +1,9 @@
-import { EmailSignupData, supabase } from './supabase'
-
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"
+
+interface EmailSignupData {
+  email: string
+  created_at?: string
+}
 
 interface ApiResponse<T> {
   success?: boolean
@@ -202,7 +205,7 @@ class ApiService {
 
   // Get quote for gasless transactions
   async getGaslessQuote(request: GaslessQuoteRequest): Promise<GaslessQuoteResponse> {
-    return this.request("/api/v1/relayer/gasless/quote", {
+    return this.request("/api/v1/relayer/quote", {
       method: "POST",
       body: JSON.stringify(request),
     })
@@ -212,6 +215,20 @@ class ApiService {
   async submitGaslessTransaction(request: GaslessSubmitRequest): Promise<GaslessSubmitResponse> {
     return this.request("/api/v1/relayer/gasless/submit", {
       method: "POST", 
+      body: JSON.stringify(request),
+    })
+  }
+
+  // Submit gasless transaction with proper wallet integration
+  async submitGaslessWithProperWallet(request: {
+    senderAddress: string
+    recipientAddress: string
+    amount: string
+    coinType: string
+    relayerFee: string
+  }): Promise<GaslessSubmitResponse> {
+    return this.request("/api/v1/relayer/submitGaslessWithProperWallet", {
+      method: "POST",
       body: JSON.stringify(request),
     })
   }
@@ -409,27 +426,33 @@ class ApiService {
     }
   }
 
+  // Submit gasless transaction with wallet (user signs, relayer pays gas)
+  async submitGaslessWithWallet(request: {
+    transactionBytes: number[]
+    authenticatorBytes: number[]
+    functionName?: string
+  }): Promise<GaslessSubmitResponse> {
+    return this.request("/api/v1/relayer/gasless-wallet-serialized", {
+      method: "POST",
+      body: JSON.stringify(request),
+    })
+  }
+
   // Email signup for mainnet waitlist
   async submitEmailSignup(email: string, twitter?: string): Promise<SubmissionResponse> {
     try {
-      // Prepare the signup data
-      const signupData = {
-        email: email.trim(),
-        twitter: twitter?.trim() || undefined,
-        created_at: new Date().toISOString()
-      }
-
-      // Insert into Supabase via REST API
-      const table = await supabase.from('waitlist')
-      const { data: result, error } = await table.insert([signupData])
-
-      if (error) {
-        return { 
-          success: false, 
-          error: `Database error: ${error.message}` 
-        }
-      }
-
+      // For now, just return success - implement backend endpoint later
+      console.log('Email signup:', { email, twitter })
+      
+      // TODO: Implement actual backend endpoint for email collection
+      // const response = await fetch(`${API_BASE_URL}/api/v1/waitlist`, {
+      //   method: 'POST',
+      //   headers: {
+      //     'Content-Type': 'application/json',
+      //   },
+      //   body: JSON.stringify({ email, twitter })
+      // })
+      
       return { success: true }
     } catch (error) {
       return { 
