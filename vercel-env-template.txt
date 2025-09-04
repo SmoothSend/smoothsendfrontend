@@ -1,5 +1,10 @@
 # Frontend Environment Variables for Vercel
 # Add these in Vercel Dashboard -> Project Settings -> Environment Variables
+# Uses standardized SmoothSend environment variable naming with NEXT_PUBLIC_ prefix
+
+# =============================================================================
+# REQUIRED CONFIGURATION
+# =============================================================================
 
 # Backend API Configuration
 NEXT_PUBLIC_API_URL=https://your-azure-backend.azurewebsites.net
@@ -7,14 +12,30 @@ NEXT_PUBLIC_API_URL=https://your-azure-backend.azurewebsites.net
 # Aptos Network Configuration
 NEXT_PUBLIC_APTOS_NETWORK=testnet
 
-# Contract Addresses
+# Contract Addresses (must match backend configuration)
 NEXT_PUBLIC_USDC_CONTRACT=0x3c27315fb69ba6e4b960f1507d1cefcc9a4247869f26a8d59d6b7869d23782c::test_coins::USDC
-NEXT_PUBLIC_RELAYER_ADDRESS=your_relayer_address_here
 NEXT_PUBLIC_SMOOTHSEND_CONTRACT=your_smoothsend_contract_address
+NEXT_PUBLIC_RELAYER_ADDRESS=your_relayer_address_here
 
-# Testnet Configuration (for demo purposes)
+# =============================================================================
+# OPTIONAL CONFIGURATION
+# =============================================================================
+
+# Test Configuration (for demo purposes)
 NEXT_PUBLIC_TESTNET_SENDER_ADDRESS=0x5d39e7e11ebab92bcf930f3723c2498eb7accea57fce3c064ab1dba2df5ff29a
 
-# Supabase Configuration
+# Supabase Configuration (optional)
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# Debug Configuration
+NEXT_PUBLIC_SHOW_DEBUG=false
+
+# =============================================================================
+# DEPLOYMENT NOTES
+# =============================================================================
+# 1. All variables with NEXT_PUBLIC_ prefix will be available in the browser
+# 2. Ensure NEXT_PUBLIC_API_URL points to your deployed backend
+# 3. Contract addresses must match your backend configuration exactly
+# 4. For production: set NEXT_PUBLIC_APTOS_NETWORK=mainnet and update contract addresses
+# 5. Environment validation will run at build time and catch configuration errors

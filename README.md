@@ -37,8 +37,10 @@ npm install
 ### 2. Environment Setup
 ```bash
 cp .env.example .env.local
-# Edit .env.local with your configuration
+# Edit .env.local with your configuration using standardized variable names
 ```
+
+**🆕 New:** SmoothSend now uses a unified environment variable management system with validation. See [Environment Variables Guide](../SmoothSendRelayerWorking/docs/ENVIRONMENT_VARIABLES.md) for complete configuration details.
 
 ### 3. Run Development Server
 ```bash
@@ -48,15 +50,28 @@ npm run dev
 
 ## 🔧 Environment Variables
 
-Create `.env.local`:
+**🆕 Unified Environment System:** SmoothSend now uses standardized environment variables with Zod validation.
+
+Create `.env.local` (see `.env.example` for complete template):
 
 ```env
-# Backend API
-NEXT_PUBLIC_API_URL=your_backend_url
-
-# Relayer Configuration
-NEXT_PUBLIC_RELAYER_ADDRESS=your_relayer_address
+# Required Configuration
+NEXT_PUBLIC_API_URL=http://localhost:3000
 NEXT_PUBLIC_APTOS_NETWORK=testnet
+NEXT_PUBLIC_USDC_CONTRACT=0x3c27...::test_coins::USDC
+NEXT_PUBLIC_SMOOTHSEND_CONTRACT=your_contract_address
+NEXT_PUBLIC_RELAYER_ADDRESS=your_relayer_address
+
+# Optional Configuration
+NEXT_PUBLIC_SHOW_DEBUG=false
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+```
+
+**📚 Complete Documentation:** See [Environment Variables Guide](../SmoothSendRelayerWorking/docs/ENVIRONMENT_VARIABLES.md) for:
+- Standardized naming conventions
+- Validation details  
+- Deployment configuration
+- Troubleshooting guide
 
 # Contract Addresses (testnet)
 NEXT_PUBLIC_USDC_CONTRACT=your_usdc_contract_address
