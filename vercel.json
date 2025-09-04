@@ -13,8 +13,10 @@
     }
   ],
   "env": {
-    "NEXT_PUBLIC_API_URL": "https://your-azure-backend.azurewebsites.net",
-    "NEXT_PUBLIC_APTOS_NETWORK": "testnet",
-    "NEXT_PUBLIC_USDC_CONTRACT": "0x3c27315fb69ba6e4b960f1507d1cefcc9a4247869f26a8d59d6b7869d23782c::test_coins::USDC"
+    "NEXT_PUBLIC_API_URL": "@next_public_api_url",
+    "NEXT_PUBLIC_APTOS_NETWORK": "@next_public_aptos_network",
+    "NEXT_PUBLIC_USDC_CONTRACT": "@next_public_usdc_contract",
+    "NEXT_PUBLIC_SMOOTHSEND_CONTRACT": "@next_public_smoothsend_contract",
+    "NEXT_PUBLIC_RELAYER_ADDRESS": "@next_public_relayer_address"
   }
 }

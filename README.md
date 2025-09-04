@@ -146,12 +146,20 @@ vercel --prod
 ```
 
 ### Environment Variables on Vercel
-Add these in your Vercel dashboard:
-- `NEXT_PUBLIC_API_URL`
-- `NEXT_PUBLIC_RELAYER_ADDRESS`
-- `NEXT_PUBLIC_APTOS_NETWORK`
-- `NEXT_PUBLIC_USDC_CONTRACT`
-- `NEXT_PUBLIC_SMOOTHSEND_CONTRACT`
+Set up environment variables in your Vercel dashboard (Project → Settings → Environment Variables).
+
+**Required Variables:**
+- `NEXT_PUBLIC_API_URL` - Your backend API URL (e.g., https://your-azure-backend.azurewebsites.net)
+- `NEXT_PUBLIC_APTOS_NETWORK` - Aptos network to use (testnet/mainnet)
+- `NEXT_PUBLIC_USDC_CONTRACT` - USDC contract address for the network
+
+**Optional Variables:**
+- `NEXT_PUBLIC_RELAYER_ADDRESS` - Relayer wallet address
+- `NEXT_PUBLIC_SMOOTHSEND_CONTRACT` - SmoothSend contract address
+- `NEXT_PUBLIC_SUPABASE_URL` - Supabase project URL (if using)
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase anonymous key (if using)
+
+📝 **Note:** See `vercel-env-template.txt` for complete variable list and descriptions.
 
 ### Self-hosting
 ```bash
